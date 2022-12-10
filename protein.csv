@@ -1,0 +1,7 @@
+protein_id,protein_title,cdd_id,gene_id,taxon_id,poly_type
+15600686,DNA polymerase I [Pseudomonas aeruginosa PAO1],235591,877794,208964,A
+15597083,DNA polymerase II [Pseudomonas aeruginosa PAO1],235595,878669,208964,B
+15596120,DNA polymerase IV [Pseudomonas aeruginosa PAO1],235035,881987,208964,Y
+308154503,error-prone DNA polymerase [Pseudomonas aeruginosa PAO1],235553,880686,208964,C
+15598836,DNA polymerase III subunit alpha [Pseudomonas aeruginosa PAO1],235554,880490,208964,C
+15595867,hypothetical protein PA0670 [Pseudomonas aeruginosa PAO1],176458,880683,208964,Y

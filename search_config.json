@@ -1,0 +1,25 @@
+{
+      "db": ["pubmed", "protein", "nuccore", "ipg",
+              "nucleotide", "structure", "genome",
+              "annotinfo", "assembly", "bioproject",
+              "biosample", "blastdbinfo", "books", "cdd",
+              "clinvar", "gap", "gapplus", "grasp",
+              "dbvar", "gene", "gds", "geoprofiles",
+              "homologene", "medgen", "mesh", "nlmcatalog",
+              "omim", "orgtrack", "pmc", "popset",
+              "proteinclusters", "pcassay", "protfam",
+              "pccompound", "pcsubstance", "seqannot", "snp",
+              "sra", "taxonomy", "biocollections"],
+
+      "chunk": 10,
+      "tags": {
+        "gene": {
+          "retmode": "xml"
+        },
+        "protein": {
+          "rettype": "native",
+          "retmode": "xml"
+        }
+      }
+
+}

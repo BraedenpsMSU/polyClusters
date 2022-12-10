@@ -1,0 +1,2 @@
+taxon_id,name,species_id,species,genus_id,genus,family_id,family,order_id,order,class_id,class,phylum_id,phylum
+208964,Pseudomonas aeruginosa PAO1,287,Pseudomonas aeruginosa,286,Pseudomonas,135621,Pseudomonadaceae,72274,Pseudomonadales,1236,Gammaproteobacteria,1224,Proteobacteria

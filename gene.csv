@@ -1,0 +1,7 @@
+gene_id,gene_symbol,proteins_for_gene,assembly,taxon_id,description
+877794,polA,1,GCF_000006765.1,208964,DNA polymerase I
+878669,polB,1,GCF_000006765.1,208964,DNA polymerase II
+880686,PA0669,1,GCF_000006765.1,208964,error-prone DNA polymerase
+881987,dinB,1,GCF_000006765.1,208964,DNA polymerase IV
+880490,dnaE,1,GCF_000006765.1,208964,DNA polymerase III subunit alpha
+880683,PA0670,1,GCF_000006765.1,208964,hypothetical protein
