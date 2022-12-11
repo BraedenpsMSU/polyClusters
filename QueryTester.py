@@ -16,12 +16,10 @@ class QueryTester:
 
     def __call__(self, *args, **kwargs):
         current_job = self.factory(*args, **kwargs)
-        results_iterator = current_job.get_results()
         sleep(self.delay)
-        for code in current_job.run_jobs():
+        for code, _next in current_job.run_jobs():
             print(f"{code=}")
             if code == 0:
-                _next = next(results_iterator)
                 self.total_size += len(str(_next))
                 if _next is not None:
                     if not self.pathflag:

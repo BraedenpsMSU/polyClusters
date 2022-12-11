@@ -1,8 +1,10 @@
 import json
 import os
 from collections import OrderedDict
+import random
 
 import pandas
+import requests.exceptions
 from requests import post, get
 from othermain import *
 
@@ -312,7 +314,6 @@ def run(id=None):
     assemblies = get_assembly_data()
     _values = [(asm['taxon_id'], asm['accession']) for asm in assemblies]
     sleep(.36)
-
     for taxon in _values:
         if id is not None:
             if taxon[0] not in id:
@@ -344,21 +345,16 @@ def run(id=None):
 
 
 if __name__ == "__main__":
-    # taxon =  ('208964','GCF_000006765.1')
-    # final_genes = taxon_to_genes(*taxon)
-    # print(json.dumps(get_Taxonomy(['208964']), indent=4))
-    # print(repr(get_Taxonomy(['208964'])))
-    # # test_value = ['452909', '425885', '179607', '176459', '176458', '176457', '176456',
-    # #               '176455', '176454', '176453', '882393']
-    # test_genes = ['883126', '883094', '882789', '882652', '882473', '882393',
-    #                '882249', '882125', '882038', '881987','880683']
-    # test_value3 = ['15595867']
-    # t2 = gene_to_protein(test_genes)
-    # t4 = protein_to_cdd(t2)
-    #
-    # t5 = match_gene_to_cdd(genes=test_genes)
-    # t6 = get_protein(t5)
-    run(test=True)
+    assemblies = get_assembly_data()
+    random.seed(59717)
+    random.shuffle(assemblies)
+    index = 0
+    for item in assemblies:
+        try:
+            run([item])
+        except (requests.exceptions.JSONDecodeError,LookupError):
+            print(f"Something odd happened with taxon {item} - skipping it")
+
 
 # for taxon_id in values:
 #     if taxon_id[0] in result_df[['TaxonID']].values:

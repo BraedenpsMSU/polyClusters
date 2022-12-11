@@ -69,42 +69,38 @@ class NCBICompositeJob:
                 if not query.success \
                         and not query.exceed_limit \
                         and not query.server_unavailable:
+                    if query.status_code == 500:
+                            raise LookupError("Server is having internal issues")
                     raise RuntimeError(f"Bad Server request with https-code {query.status_code}")
                 elif not query.success \
                         and query.exceed_limit:
-                    yield 2
+                    yield 2, None
                 elif not query.success:
-                    yield 1
+                    yield 1, None
                 else:
                     runner.progress()
+                    current_result = None
                     if runner.is_finished():
-                        self._results.append(
-                            self.__format_result(
-                                runner.generate_results(),
-                                time_of_request=self.last_request_time
-                            )
+                        current_result = self.format_result(
+                            runner.generate_results(),
+                            time_of_request=self.last_request_time
                         )
-                        self.results_produced += 1
-                    yield 0
+                        assert current_result['results'] is not None
+                        self._results.append(
+                            current_result
+                        )
+                    yield 0, current_result
             self._complete += 1
         self.results = OrderedDict()
         for result in self._results:
             self.results.update(result['results'])
-        self.results = self.__format_result(
+        self.results = self.format_result(
             self.results,
             time_of_request=self.last_request_time
         )
         self.finished = True
 
-    def get_results(self) -> Iterable[Optional[OrderedDict]]:
-        while self.results_yielded < len(self._jobs):
-            if self.results_yielded < self.results_produced:
-                yield self._results[self.results_yielded]
-                self.results_yielded += 1
-            else:
-                yield None
-
-    def __format_result(self, result, time_of_request=None):
+    def format_result(self, result, time_of_request=None):
         outp = OrderedDict()
         outp['composite_star_time'] = self.run_date
         outp['time_of_last_request'] = time_of_request
@@ -209,36 +205,75 @@ class NCBIQueryFactory:
         return NCBICompositeJob(title=_title, jobs=[value])
 
     def get_link(self, param: str, param1: Sequence[NCBIId], linkname: Optional[str] = None):
-        _jobs = [NCBIJobPacket.NCBIMonoJobPacket(
-                NCBIQueries.EntrezLink(param1[0].db, param, [ncbi_id.uid for ncbi_id in param1], linkname=linkname)
-            )
-        ]
-        _title = f"link {param1[0].db} {param} {[ncbi_id.uid for ncbi_id in param1]}"
+        if len(param1) < self.config['chunk']:
+            _jobs = [NCBIJobPacket.NCBIMonoJobPacket(
+                    NCBIQueries.EntrezLink(param1[0].db, param, [ncbi_id.uid for ncbi_id in param1], linkname=linkname)
+                )
+            ]
+            _title = f"link {param1[0].db} {param} {[ncbi_id.uid for ncbi_id in param1]}"
+        else:
+            _jobs = [NCBIJobPacket.NCBIMonoJobPacket(
+                NCBIQueries.EntrezLink(param1[0].db, param, [ncbi_id.uid for ncbi_id in chunk], linkname=linkname)
+                ) for chunk in self.list_chunker(param1)
+            ]
+            _title = f"link {param1[0].db} {param} {[ncbi_id.uid for ncbi_id in param1]}"
         return NCBICompositeJob(_title, _jobs)
-       # raise NotImplementedError('Post Link not implement yet')
 
     def get_data(self, *param, **kwargs):
-        if len(param[0]) <= 150:
+        if len(param[0]) <= self.config["chunk"]:
             _jobs = [NCBIJobPacket.NCBIMonoJobPacket(
                     NCBIQueries.EntrezFetch(db=param[0][0].db, id=[ncbi_id.uid for ncbi_id in param[0]],
                                             html_tags=self.config["tags"][param[0][0].db])
                 )
             ]
-            _title = f"Fetch Data {param[0][0].db} {[ncbi_id.uid for ncbi_id in param[0]]}"
-            return NCBICompositeJob(_title, _jobs)
-        raise ValueError("To many values")
-
+            _title = f"Fetch Data from {param[0][0].db} {[ncbi_id.uid for ncbi_id in param[0]]}"
+        else:
+            _jobs = [NCBIJobPacket.NCBIMonoJobPacket(
+                    NCBIQueries.EntrezFetch(db=param[0][0].db, id=[ncbi_id.uid for ncbi_id in chunk],
+                                            html_tags=self.config["tags"][param[0][0].db])
+                ) for chunk in self.list_chunker(param[0])
+            ]
+            _title = f"Fetch Data from {param[0][0].db} chunking {[ncbi_id.uid for ncbi_id in param[0]]}"
+        return NCBICompositeJob(_title, _jobs)
 
     def get_Summary(self, *param, **kwargs):
-        if len(param[0]) <= 150:
+        if len(param[0]) <= self.config["chunk"]:
             _jobs = [NCBIJobPacket.NCBIMonoJobPacket(
                     NCBIQueries.EntrezSummary(db=param[0][0].db, id=[ncbi_id.uid for ncbi_id in param[0]])
                 )
             ]
-            _title = f"Summary {param[0][0].db} {[ncbi_id.uid for ncbi_id in param[0]]}"
-            return NCBICompositeJob(_title, _jobs)
-        raise ValueError("To many values")
+            _title = f"Summary from {param[0][0].db} chunking {[ncbi_id.uid for ncbi_id in param[0]]}"
 
+        else:
+            _jobs = [NCBIJobPacket.NCBIMonoJobPacket(
+                NCBIQueries.EntrezSummary(db=param[0][0].db, id=[ncbi_id.uid for ncbi_id in chunk])
+                ) for chunk in self.list_chunker(param[0])
+            ]
+            _title = f"Summary from {param[0][0].db} chunking {[ncbi_id.uid for ncbi_id in param[0]]}"
+        return NCBICompositeJob(_title, _jobs)
+
+
+    def taxon_query(self, taxon, page_token=None):
+        if page_token:
+            _jobs = [NCBIJobPacket.NCBIMonoJobPacket(
+                NCBIQueries.GeneDatasetQuery(taxon, page_token=page_token)
+            )
+            ]
+        else:
+            _jobs = [NCBIJobPacket.NCBIMonoJobPacket(
+                NCBIQueries.GeneDatasetQuery(taxon)
+            )
+            ]
+        _title = f"getting genes"
+        return NCBICompositeJob(_title, _jobs)
+
+    def lineage_query(self, param):
+        _jobs = [NCBIJobPacket.NCBIMonoJobPacket(
+            NCBIQueries.TaxonSummary(param)
+        )
+        ]
+        _title = f"getting taxons"
+        return NCBICompositeJob(_title, _jobs)
 
     def list_chunker(self, input_list: Sequence[NCBIId], chunk_size=None) -> List[List[NCBIId]]:
         """
@@ -264,28 +299,6 @@ class NCBIQueryFactory:
             else:
                 break
         return output
-
-    def taxon_query(self, taxon, page_token=None):
-        if page_token:
-            _jobs = [NCBIJobPacket.NCBIMonoJobPacket(
-                NCBIQueries.GeneDatasetQuery(taxon, page_token=page_token)
-            )
-            ]
-        else:
-            _jobs = [NCBIJobPacket.NCBIMonoJobPacket(
-                NCBIQueries.GeneDatasetQuery(taxon)
-            )
-            ]
-        _title = f"getting genes"
-        return NCBICompositeJob(_title, _jobs)
-
-    def lineage_query(self, param):
-        _jobs = [NCBIJobPacket.NCBIMonoJobPacket(
-            NCBIQueries.TaxonSummary(param)
-        )
-        ]
-        _title = f"getting taxons"
-        return NCBICompositeJob(_title, _jobs)
 
 
 if __name__ == "__main__":
@@ -356,4 +369,5 @@ if __name__ == "__main__":
                              )
                          ) for chunk in chunks
                      ])
+
 

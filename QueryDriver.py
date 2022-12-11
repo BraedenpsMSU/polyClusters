@@ -46,9 +46,6 @@ class QueryDriver:
 
     # Constructor
     def __init__(self):
-        # TODO should implement a singleton pattern
-        #   - this is to insure limit kept in check
-        #   - and to allow the db to updated while running (preventing possible data lose)
         try:
             self.factory = NCBIQueryFactory()
         except FileNotFoundError:
@@ -134,13 +131,11 @@ class QueryDriver:
             self._proceed()
 
         # Run the CompositeJob until done or error
-        results_iter = current_job.get_results()
-        for return_code in current_job.run_jobs():
+        for return_code, result in current_job.run_jobs():
             self._job_times.append(time.time())
             self._proceed()
             try:
                 if self._return_code_logic(return_code):
-                    result = next(results_iter)
                     print(current_job.title)
                     try:
                         returnable = self._parse_results(result)

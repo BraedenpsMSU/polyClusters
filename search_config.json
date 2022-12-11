@@ -11,7 +11,7 @@
               "pccompound", "pcsubstance", "seqannot", "snp",
               "sra", "taxonomy", "biocollections"],
 
-      "chunk": 10,
+      "chunk": 150,
       "tags": {
         "gene": {
           "retmode": "xml"
